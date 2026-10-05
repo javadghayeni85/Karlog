@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#2563eb">
+<title>ثبت کار انجام‌شده</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { font-family: Tahoma, sans-serif; background:#f4f6f8; margin:0; padding:12px; font-size:16px; color:#0f172a; }
+  .box { max-width:600px; margin:auto; background:white; padding:16px; border-radius:16px; box-shadow:0 4px 20px #0001; }
+  h1 { text-align:center; font-size:18px; margin:0 0 14px; }
+  form { display:grid; gap:10px; grid-template-columns:1fr 1fr; }
+  input, select, button { padding:14px; border-radius:10px; border:1px solid #ccc; font-family:inherit; font-size:16px; width:100%; }
+  select { background:white; appearance:none; background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'><path d='M2 4l4 4 4-4' fill='none' stroke='%2364748b' stroke-width='2'/></svg>"); background-repeat:no-repeat; background-position:left 12px center; background-size:14px; padding-left:36px; }
+  .full { grid-column:1 / -1; }
+  input[type="time"] { text-align:center; font-size:18px; }
+  .label { font-size:12px; color:#64748b; margin-bottom:4px; text-align:center; }
+  .col { display:flex; flex-direction:column; }
+  .submit { background:#2563eb; color:white; border:none; cursor:pointer; grid-column:1 / -1; font-size:16px; font-weight:bold; padding:14px; }
+  .toolbar { display:flex; gap:8px; margin-top:14px; }
+  .toolbar button { flex:1; padding:14px; border-radius:10px; border:none; cursor:pointer; font-size:15px; font-weight:bold; font-family:inherit; background:#059669; color:white; }
+  .day { margin-top:20px; }
+  .day h2 { font-size:15px; color:#475569; border-bottom:1px solid #e2e8f0; padding-bottom:6px; margin:0 0 8px; }
+  .day.friday h2 { color:#9333ea; }
+  .task { display:flex; justify-content:space-between; align-items:center; background:#f1f5f9; padding:10px 12px; border-radius:10px; margin-top:8px; gap:8px; }
+  .task .info { font-size:14px; flex:1; min-width:0; }
+  .task .info strong { display:block; word-break:break-word; }
+  .task small { color:#64748b; font-size:12px; }
+  .cat-tag { display:inline-block; background:#e0e7ff; color:#3730a3; padding:2px 8px; border-radius:20px; font-size:11px; margin-left:4px; font-weight:normal; }
+  .cat-tag.sci { background:#dbeafe; color:#1e40af; }
+  .task .acts { display:flex; gap:4px; flex-shrink:0; }
+  .task button { border:none; padding:8px 10px; border-radius:8px; cursor:pointer; font-size:13px; width:auto; }
+  .edit { background:#64748b; color:white; }
+  .del { background:#dc2626; color:white; }
+  .daysum { margin-top:8px; font-size:13px; color:#475569; background:#fef3c7; padding:8px 10px; border-radius:8px; text-align:center; }
+  .daysci { margin-top:6px; font-size:13px; color:#1e40af; background:#dbeafe; padding:8px 10px; border-radius:8px; text-align:center; font-weight:bold; }
+  .daywaste { margin-top:6px; font-size:13px; color:#7f1d1d; background:#fee2e2; padding:8px 10px; border-radius:8px; text-align:center; }
+  .frinote { margin-top:6px; font-size:13px; color:#6b21a8; background:#f3e8ff; padding:8px 10px; border-radius:8px; text-align:center; }
+  #total { text-align:center; font-weight:bold; margin-top:16px; color:#1e293b; background:#e0e7ff; padding:12px; border-radius:10px; }
+
+  .modal { position:fixed; inset:0; background:#0008; display:none; align-items:center; justify-content:center; padding:12px; z-index:100; }
+  .modal.open { display:flex; }
+  .modal-inner { background:white; border-radius:16px; padding:14px; max-width:520px; width:100%; max-height:88vh; overflow:auto; display:flex; flex-direction:column; }
+  .tabs { display:flex; gap:4px; margin-bottom:10px; background:#f1f5f9; padding:4px; border-radius:10px; }
+  .tabs .tab { flex:1; padding:10px 4px; border:none; background:transparent; border-radius:8px; cursor:pointer; font-family:inherit; font-size:14px; color:#334155; }
+  .tabs .tab.active { background:white; font-weight:bold; box-shadow:0 1px 3px #0002; color:#0f172a; }
+  .summary-section { margin-bottom:14px; }
+  .summary-section h3 { font-size:14px; color:#475569; margin:0 0 8px; display:flex; justify-content:space-between; align-items:center; }
+  .summary-section h3 span { font-size:11px; color:#94a3b8; font-weight:normal; }
+  .activity-row { display:flex; justify-content:space-between; align-items:center; padding:10px 12px; background:#f1f5f9; border-radius:10px; margin-bottom:6px; font-size:14px; }
+  .activity-row strong { color:#0f172a; }
+  .activity-row .dur { background:#dbeafe; color:#1e40af; padding:4px 10px; border-radius:20px; font-size:13px; font-weight:bold; }
+  .activity-row.avg .dur { background:#dcfce7; color:#166534; }
+  .activity-row.waste { background:#fee2e2; }
+  .activity-row.waste .dur { background:#fecaca; color:#991b1b; }
+  .activity-row.sci { background:#dbeafe; }
+  .activity-row.sci .dur { background:#93c5fd; color:#1e3a8a; }
+  .grand { text-align:center; padding:14px; background:#dcfce7; color:#166534; border-radius:10px; font-weight:bold; font-size:15px; margin-top:8px; }
+  .grand-sci { text-align:center; padding:14px; background:#dbeafe; color:#1e40af; border-radius:10px; font-weight:bold; font-size:15px; margin-top:8px; }
+  .grand-waste { text-align:center; padding:14px; background:#fee2e2; color:#991b1b; border-radius:10px; font-weight:bold; font-size:15px; margin-top:8px; }
+  .week-card { background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:12px; margin-bottom:10px; }
+  .week-card h4 { margin:0 0 10px; font-size:14px; color:#1e293b; display:flex; justify-content:space-between; align-items:center; }
+  .week-card h4 span { font-size:11px; color:#94a3b8; font-weight:normal; }
+  .week-card .wk-row { display:flex; justify-content:space-between; padding:6px 0; font-size:13px; border-bottom:1px dashed #e2e8f0; }
+  .week-card .wk-row:last-child { border:none; }
+  .week-card .wk-row .lbl { color:#475569; }
+  .week-card .wk-row .val { color:#1e293b; font-weight:bold; }
+  .week-card .wk-row.wasted .lbl, .week-card .wk-row.wasted .val { color:#991b1b; }
+  .week-card .wk-row.sci .lbl, .week-card .wk-row.sci .val { color:#1e40af; }
+  .chart-wrap { background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:10px; margin-bottom:14px; }
+  .chart-wrap h4 { margin:0 0 6px; font-size:13px; color:#334155; }
+  .chart-wrap .sub { font-size:11px; color:#94a3b8; margin-bottom:6px; }
+  .modal-btns { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:12px; }
+  .modal-btns button { padding:12px; border-radius:10px; border:none; cursor:pointer; font-size:14px; font-weight:bold; font-family:inherit; }
+  .btn-share { background:#059669; color:white; }
+  .btn-copy  { background:#2563eb; color:white; }
+  .btn-csv   { background:#7c3aed; color:white; }
+  .btn-close { background:#e2e8f0; color:#0f172a; }
+  pre.hidden { display:none; }
+</style>
+</head>
+<body>
+<div class="box">
+  <h1>ثبت کار انجام‌شده</h1>
+
+  <form id="taskForm">
+    <input type="text" id="title" placeholder="توضیح (اختیاری)" autocomplete="off" class="full">
+    <div class="col full">
+      <div class="label">دسته</div>
+      <select id="category" required>
+        <option value="">انتخاب کن...</option>
+      </select>
+    </div>
+    <div class="col">
+      <div class="label">شروع</div>
+      <input type="time" id="start" required>
+    </div>
+    <div class="col">
+      <div class="label">پایان</div>
+      <input type="time" id="end" required>
+    </div>
+    <button type="submit" class="submit">ثبت</button>
+  </form>
+
+  <div class="toolbar">
+    <button id="btnSummary">📊 خلاصه و جمع‌بندی</button>
+  </div>
+
+  <div id="days"></div>
+  <p id="total"></p>
+</div>
+
+<div class="modal" id="modal">
+  <div class="modal-inner">
+    <div class="tabs">
+      <button class="tab active" data-range="today">امروز</button>
+      <button class="tab" data-range="week">این هفته</button>
+      <button class="tab" data-range="all">تاریخچه هفتگی</button>
+    </div>
+    <div id="summaryBody"></div>
+    <div class="modal-btns">
+      <button class="btn-share" id="btnShare">اشتراک‌گذاری</button>
+      <button class="btn-copy" id="btnCopy">کپی متن</button>
+      <button class="btn-csv" id="btnCsv">خروجی CSV</button>
+      <button class="btn-close" id="btnClose">بستن</button>
+    </div>
+    <pre id="summaryText" class="hidden"></pre>
+  </div>
+</div>
+
+<script>
+/* ============ تنظیمات ============ */
+const CATEGORIES = ['خواب','مطالعه','غیردرسی','مباحثه','شخصی','تلف شده','تفریح و ورزش','عبادت','کلاس'];
+const SCIENTIFIC_CATS = ['مطالعه','غیردرسی','مباحثه','کلاس'];
+const DAY_MIN = 24 * 60;
+const WEEK_DAYS = 6;
+
+const form = document.getElementById('taskForm');
+const titleEl = document.getElementById('title');
+const categoryEl = document.getElementById('category');
+const startEl = document.getElementById('start');
+const endEl = document.getElementById('end');
+const daysEl = document.getElementById('days');
+const totalEl = document.getElementById('total');
+const modal = document.getElementById('modal');
+const summaryBody = document.getElementById('summaryBody');
+const summaryText = document.getElementById('summaryText');
+
+categoryEl.innerHTML = '<option value="">انتخاب کن...</option>' +
+  CATEGORIES.map(c => `<option value="${c}">${c}</option>`).join('');
+
+let logs = JSON.parse(localStorage.getItem('myLogs') || '[]');
+let currentRange = 'today';
+
+function save() { localStorage.setItem('myLogs', JSON.stringify(logs)); }
+
+function dateStr(d) {
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function todayStr() { return dateStr(new Date()); }
+function toMin(t) { const [h,m] = t.split(':').map(Number); return h*60+m; }
+function formatDurLong(min) {
+  min = Math.round(min);
+  if (min <= 0) return '0 دقیقه';
+  const h = Math.floor(min/60), m = min%60;
+  if (h && m) return `${h} ساعت و ${m} دقیقه`;
+  if (h) return `${h} ساعت`;
+  return `${m} دقیقه`;
+}
+function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function faDate(d) { return new Date(d).toLocaleDateString('fa-IR', { weekday:'long', day:'numeric', month:'long' }); }
+function isFriday(dateStrOrObj) {
+  const d = typeof dateStrOrObj === 'string' ? new Date(dateStrOrObj) : dateStrOrObj;
+  return d.getDay() === 5;
+}
+function startOfIranianWeek() {
+  const d = new Date();
+  d.setHours(0,0,0,0);
+  const day = d.getDay();
+  const diff = (day + 1) % 7;
+  d.setDate(d.getDate() - diff);
+  return d;
+}
+function satThuDates(weekStart) {
+  const out = [];
+  for (let i = 0; i < WEEK_DAYS; i++) {
+    const d = new Date(weekStart);
+    d.setDate(d.getDate() + i);
+    out.push(dateStr(d));
+  }
+  return out;
+}
+function isScientific(l) { return SCIENTIFIC_CATS.includes((l.category||'').trim()); }
+function durOf(l) { return Math.max(0, toMin(l.end) - toMin(l.start)); }
+
+/* ============ رندر لیست ============ */
+function render() {
+  const byDate = {};
+  logs.forEach(l => { if (!byDate[l.date]) byDate[l.date] = []; byDate[l.date].push(l); });
+  const dates = Object.keys(byDate).sort().reverse();
+  daysEl.innerHTML = '';
+  let totalAll = 0;
+
+  dates.forEach(date => {
+    const dayTasks = byDate[date].sort((a,b) => toMin(a.start) - toMin(b.start));
+    let dayTotal = 0, daySci = 0, dayWastedManual = 0;
+    const wrap = document.createElement('div');
+    wrap.className = 'day';
+    const fri = isFriday(date);
+    if (fri) wrap.classList.add('friday');
+
+    const h = document.createElement('h2');
+    h.textContent = (date === todayStr() ? 'امروز — ' : '') + faDate(date) + (fri ? ' (جمعه)' : '');
+    wrap.appendChild(h);
+
+    dayTasks.forEach(task => {
+      const dur = durOf(task);
+      const cat = (task.category || '').trim();
+      if (!fri && dur > 0) {
+        dayTotal += dur;
+        if (isScientific(task)) daySci += dur;
+        if (cat === 'تلف شده') dayWastedManual += dur;
+      }
+      const isSci = isScientific(task);
+      const div = document.createElement('div');
+      div.className = 'task';
+      div.innerHTML = `<div class="info">
+        <strong>${escapeHtml(task.title || cat || '—')} <span class="cat-tag${isSci?' sci':''}">${escapeHtml(cat)}</span></strong>
+        <small>${task.start} تا ${task.end} — ${formatDurLong(dur)}</small>
+      </div>`;
+      const acts = document.createElement('div');
+      acts.className = 'acts';
+      const edit = document.createElement('button');
+      edit.className = 'edit'; edit.textContent = '✏️';
+      edit.onclick = () => {
+        titleEl.value = task.title || '';
+        categoryEl.value = task.category || '';
+        startEl.value = task.start;
+        endEl.value = task.end;
+        logs = logs.filter(x => x.id !== task.id); save(); render();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      };
+      const del = document.createElement('button');
+      del.className = 'del'; del.textContent = '🗑';
+      del.onclick = () => {
+        if (!confirm('حذف شود؟')) return;
+        logs = logs.filter(x => x.id !== task.id); save(); render();
+      };
+      acts.appendChild(edit); acts.appendChild(del); div.appendChild(acts); wrap.appendChild(div);
+    });
+
+    if (fri) {
+      const note = document.createElement('div');
+      note.className = 'frinote';
+      note.textContent = '🗓 جمعه — در آمار و میانگین‌ها حساب نمی‌شود';
+      wrap.appendChild(note);
+    } else {
+      if (daySci > 0) {
+        const s = document.createElement('div');
+        s.className = 'daysci';
+        s.textContent = '📚 علمی: ' + formatDurLong(daySci) + ' (مطالعه + غیردرسی + مباحثه + کلاس)';
+        wrap.appendChild(s);
+      }
+      const sum = document.createElement('div');
+      sum.className = 'daysum';
+      sum.textContent = 'ثبت‌شده: ' + formatDurLong(dayTotal);
+      wrap.appendChild(sum);
+
+      const nonWasted = dayTotal - dayWastedManual;
+      const totalWaste = Math.max(0, DAY_MIN - nonWasted);
+      if (totalWaste > 0) {
+        const w = document.createElement('div');
+        w.className = 'daywaste';
+        let detail = '';
+        if (dayWastedManual > 0) {
+          const autoOnly = Math.max(0, totalWaste - dayWastedManual);
+          detail = ` (${formatDurLong(dayWastedManual)} ثبت‌شده + ${formatDurLong(autoOnly)} ثبت‌نشده)`;
+        }
+        w.textContent = '⛔ تلف شده: ' + formatDurLong(totalWaste) + detail;
+        wrap.appendChild(w);
+      }
+      totalAll += dayTotal;
+    }
+    daysEl.appendChild(wrap);
+  });
+  totalEl.textContent = dates.length ? 'جمع کل ثبت‌شده (بدون جمعه‌ها): ' + formatDurLong(totalAll) : '';
+}
+
+/* ============ آمار ============ */
+function calcStats(range) {
+  const tasks = (range === 'today')
+    ? logs.filter(l => l.date === todayStr() && !isFriday(l.date))
+    : (range === 'week')
+      ? logs.filter(l => satThuDates(startOfIranianWeek()).includes(l.date))
+      : logs.filter(l => !isFriday(l.date));
+
+  const byCat = {};
+  const byDay = {};
+  const sciByDay = {};
+  const wastedManualByDay = {};
+  let total = 0, totalSci = 0, totalWastedManual = 0;
+
+  tasks.forEach(l => {
+    const dur = durOf(l);
+    const cat = (l.category||'').trim();
+    byCat[cat] = (byCat[cat] || 0) + dur;
+    byDay[l.date] = (byDay[l.date] || 0) + dur;
+    total += dur;
+    if (isScientific(l)) {
+      sciByDay[l.date] = (sciByDay[l.date] || 0) + dur;
+      totalSci += dur;
+    }
+    if (cat === 'تلف شده') {
+      wastedManualByDay[l.date] = (wastedManualByDay[l.date] || 0) + dur;
+      totalWastedManual += dur;
+    }
+  });
+
+  // ⬅ روزهای دارای رکورد
+  const days = Object.keys(byDay).sort();
+  const dayCount = days.length;
+
+  let autoWastedTotal = 0;
+  const autoWastedByDay = {};
+  days.forEach(d => {
+    const nonWasted = (byDay[d] || 0) - (wastedManualByDay[d] || 0);
+    const w = Math.max(0, DAY_MIN - nonWasted);
+    autoWastedByDay[d] = w;
+    autoWastedTotal += w;
+  });
+
+  return {
+    tasks, byCat, byDay, sciByDay,
+    total, totalSci, dayCount, days,
+    totalWastedManual, wastedManualByDay,
+    autoWastedTotal, autoWastedByDay,
+    totalWasted: totalWastedManual + autoWastedTotal
+  };
+}
+
+/* ============ آمار هفتگی ============ */
+function weekStats(weekStart) {
+  const startStr = typeof weekStart === 'string' ? weekStart : dateStr(weekStart);
+  const startDate = new Date(startStr);
+  const satThu = satThuDates(startDate);
+
+  const weekTasks = logs.filter(l => satThu.includes(l.date));
+  const byCat = {}, byDay = {}, sciByDay = {}, wastedManualByDay = {};
+  let total = 0, totalSci = 0, totalWastedManual = 0;
+
+  weekTasks.forEach(l => {
+    const dur = durOf(l);
+    const cat = (l.category||'').trim();
+    byCat[cat] = (byCat[cat] || 0) + dur;
+    byDay[l.date] = (byDay[l.date] || 0) + dur;
+    total += dur;
+    if (isScientific(l)) {
+      sciByDay[l.date] = (sciByDay[l.date] || 0) + dur;
+      totalSci += dur;
+    }
+    if (cat === 'تلف شده') {
+      wastedManualByDay[l.date] = (wastedManualByDay[l.date] || 0) + dur;
+      totalWastedManual += dur;
+    }
+  });
+
+  // ⬅ مبنای میانگین: فقط روزهایی که توشون رکورد ثبت شده
+  const daysWithData = Object.keys(byDay);
+  const divisor = daysWithData.length;
+
+  const avgByCat = {};
+  if (divisor > 0) Object.entries(byCat).forEach(([k,v]) => avgByCat[k] = v / divisor);
+
+  let autoWasted = 0;
+  daysWithData.forEach(d => {
+    const nonWasted = (byDay[d] || 0) - (wastedManualByDay[d] || 0);
+    autoWasted += Math.max(0, DAY_MIN - nonWasted);
+  });
+  const totalWasted = totalWastedManual + autoWasted;
+
+  return {
+    weekStart: startStr,
+    weekEnd: dateStr(new Date(new Date(startStr).setDate(new Date(startStr).getDate() + 5))),
+    satThu, divisor, byCat, avgByCat, byDay, sciByDay,
+    total, totalSci, totalWastedManual, autoWasted, totalWasted,
+    avgSci: divisor > 0 ? totalSci / divisor : 0
+  };
+}
+
+function allWeeksWithData() {
+  const set = new Set();
+  logs.forEach(l => {
+    if (isFriday(l.date)) return;
+    const d = new Date(l.date);
+    d.setHours(0,0,0,0);
+    const day = d.getDay();
+    const diff = (day + 1) % 7;
+    d.setDate(d.getDate() - diff);
+    set.add(dateStr(d));
+  });
+  return [...set].sort().reverse();
+}
+
+/* ============ نمودار خطی ============ */
+function buildScientificChart(weekStart) {
+  const start = weekStart || startOfIranianWeek();
+  const dayDates = satThuDates(start);
+  const dayNames = ['شنبه','یکشنبه','دوشنبه','سه‌شنبه','چهارشنبه','پنجشنبه'];
+  const today = todayStr();
+
+  const sciPerDay = dayDates.map(d => {
+    return logs.filter(l => l.date === d && isScientific(l)).reduce((s,l)=>s+durOf(l), 0);
+  });
+
+  const maxMin = Math.max(...sciPerDay, 60);
+  const maxH = Math.max(1, Math.ceil(maxMin / 60));
+  const W = 340, H = 200;
+  const padL = 28, padR = 12, padT = 30, padB = 30;
+  const chartW = W - padL - padR;
+  const chartH = H - padT - padB;
+  const n = sciPerDay.length;
+
+  const points = sciPerDay.map((m, i) => {
+    const x = padL + (n === 1 ? chartW/2 : (i / (n-1)) * chartW);
+    const y = padT + chartH - (m / (maxH * 60)) * chartH;
+    return { x, y, m, date: dayDates[i], label: dayNames[i], isToday: dayDates[i] === today };
+  });
+
+  let svg = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">`;
+
+  for (let h = 0; h <= maxH; h++) {
+    const y = padT + chartH - (h / maxH) * chartH;
+    const isBase = h === 0;
+    svg += `<line x1="${padL}" y1="${y}" x2="${W-padR}" y2="${y}" stroke="${isBase ? '#94a3b8' : '#e2e8f0'}" stroke-width="${isBase ? 1.2 : 1}"/>`;
+    svg += `<text x="${padL-5}" y="${y+3}" font-size="9" fill="#94a3b8" text-anchor="end">${h}</text>`;
+  }
+
+  const lineD = points.map((p,i) => (i===0?'M':'L') + p.x.toFixed(1) + ' ' + p.y.toFixed(1)).join(' ');
+  const areaD = lineD + ` L${points[n-1].x.toFixed(1)} ${(padT+chartH).toFixed(1)} L${points[0].x.toFixed(1)} ${(padT+chartH).toFixed(1)} Z`;
+  svg += `<path d="${areaD}" fill="#2563eb" fill-opacity="0.12"/>`;
+  svg += `<path d="${lineD}" fill="none" stroke="#2563eb" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`;
+
+  points.forEach(p => {
+    const stroke = p.isToday ? '#dc2626' : '#2563eb';
+    const fill = p.isToday ? '#fee2e2' : 'white';
+    svg += `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="4.5" fill="${fill}" stroke="${stroke}" stroke-width="2.2"/>`;
+    if (p.m > 0) {
+      const hh = Math.floor(p.m/60), mm = Math.round(p.m%60);
+      const txt = hh > 0 && mm > 0 ? `${hh}:${String(mm).padStart(2,'0')}` :
+                  hh > 0 ? `${hh}س` : `${mm}د`;
+      svg += `<text x="${p.x.toFixed(1)}" y="${(p.y-9).toFixed(1)}" font-size="10" fill="${p.isToday?'#dc2626':'#1e40af'}" text-anchor="middle" font-weight="bold">${txt}</text>`;
+    } else {
+      svg += `<text x="${p.x.toFixed(1)}" y="${(p.y-9).toFixed(1)}" font-size="9" fill="#94a3b8" text-anchor="middle">0</text>`;
+    }
+    svg += `<text x="${p.x.toFixed(1)}" y="${(H-padB+16).toFixed(1)}" font-size="10" fill="${p.isToday?'#dc2626':'#64748b'}" text-anchor="middle" font-weight="${p.isToday?'bold':'normal'}">${p.label}</text>`;
+  });
+
+  svg += `</svg>`;
+
+  return `
+    <div class="chart-wrap">
+      <h4>📈 نمودار خطی — ساعات علمی هر روز</h4>
+      <div class="sub">عدد روی هر نقطه = ساعت علمی آن روز | <span style="color:#dc2626">قرمز = امروز</span> | علمی = مطالعه + غیردرسی + مباحثه + کلاس</div>
+      ${svg}
+    </div>
+  `;
+}
+
+/* ============ خلاصه امروز ============ */
+function buildTodayHTML() {
+  const s = calcStats('today');
+  if (!s.tasks.length) return `<div class="grand">امروز چیزی ثبت نشده</div>`;
+
+  let html = `<div class="summary-section"><h3>⏱ جمع دسته‌های امروز</h3>`;
+  Object.entries(s.byCat).sort((a,b) => b[1] - a[1]).forEach(([name, min]) => {
+    const cls = SCIENTIFIC_CATS.includes(name) ? ' sci' : (name === 'تلف شده' ? ' waste' : '');
+    html += `<div class="activity-row${cls}"><strong>${escapeHtml(name)}</strong><span class="dur">${formatDurLong(min)}</span></div>`;
+  });
+  html += `</div>`;
+
+  html += `<div class="grand-sci">📚 علمی امروز: ${formatDurLong(s.totalSci)}</div>`;
+  html += `<div class="grand">✅ ثبت‌شده امروز: ${formatDurLong(s.total)}</div>`;
+  if (s.totalWasted > 0) {
+    html += `<div class="grand-waste">⛔ تلف‌شده امروز: ${formatDurLong(s.totalWasted)}</div>`;
+  }
+  return html;
+}
+
+/* ============ خلاصه این هفته ============ */
+function buildWeekHTML() {
+  const wk = weekStats(startOfIranianWeek());
+  if (!Object.keys(wk.byCat).length) return buildScientificChart() + `<div class="grand">این هفته چیزی ثبت نشده</div>`;
+
+  let html = buildScientificChart();
+
+  html += `<div class="summary-section"><h3>⏱ جمع این هفته <span>${wk.divisor} روز ثبت‌شده</span></h3>`;
+  Object.entries(wk.byCat).sort((a,b) => b[1] - a[1]).forEach(([name, min]) => {
+    const cls = SCIENTIFIC_CATS.includes(name) ? ' sci' : (name === 'تلف شده' ? ' waste' : '');
+    html += `<div class="activity-row${cls}"><strong>${escapeHtml(name)}</strong><span class="dur">${formatDurLong(min)}</span></div>`;
+  });
+  html += `</div>`;
+
+  html += `<div class="summary-section"><h3>📈 میانگین روزانه این هفته <span>بر پایه ${wk.divisor} روز ثبت‌شده</span></h3>`;
+  Object.entries(wk.avgByCat).sort((a,b) => b[1] - a[1]).forEach(([name, min]) => {
+    const cls = SCIENTIFIC_CATS.includes(name) ? ' sci' : (name === 'تلف شده' ? ' waste' : '');
+    html += `<div class="activity-row${cls} avg"><strong>${escapeHtml(name)}</strong><span class="dur">${formatDurLong(min)}</span></div>`;
+  });
+  html += `</div>`;
+
+  html += `<div class="grand-sci">📚 علمی این هفته: ${formatDurLong(wk.totalSci)}</div>`;
+  html += `<div class="grand-sci">📈 میانگین علمی روزانه: ${formatDurLong(wk.avgSci)}</div>`;
+
+  if (wk.totalWasted > 0) {
+    html += `<div class="summary-section"><h3>⛔ تلف شده این هفته</h3>`;
+    html += `<div class="activity-row waste"><strong>جمع تلف‌شده</strong><span class="dur">${formatDurLong(wk.totalWasted)}</span></div>`;
+    if (wk.divisor > 0) {
+      html += `<div class="activity-row waste"><strong>میانگین روزانه</strong><span class="dur">${formatDurLong(wk.totalWasted / wk.divisor)}</span></div>`;
+    }
+    html += `</div>`;
+  }
+
+  html += `<div class="grand">✅ ثبت‌شده: ${formatDurLong(wk.total)}</div>`;
+  return html;
+}
+
+/* ============ تاریخچه هفتگی ============ */
+function buildAllHTML() {
+  const weeks = allWeeksWithData();
+  if (!weeks.length) return `<div class="grand">هنوز چیزی ثبت نشده</div>`;
+
+  let html = '';
+  weeks.forEach(ws => {
+    const wk = weekStats(ws);
+    html += `<div class="week-card">`;
+    html += `<h4><span>هفته ${faDate(ws)}</span><span>${wk.divisor} روز ثبت‌شده</span></h4>`;
+
+    Object.entries(wk.avgByCat).sort((a,b) => b[1] - a[1]).forEach(([name, min]) => {
+      const cls = SCIENTIFIC_CATS.includes(name) ? ' sci' : (name === 'تلف شده' ? ' wasted' : '');
+      html += `<div class="wk-row${cls}"><span class="lbl">میانگین ${escapeHtml(name)}</span><span class="val">${formatDurLong(min)}</span></div>`;
+    });
+
+    html += `<div class="wk-row sci"><span class="lbl">📚 علمی هفته</span><span class="val">${formatDurLong(wk.totalSci)}</span></div>`;
+    html += `<div class="wk-row sci"><span class="lbl">📈 میانگین علمی روزانه</span><span class="val">${formatDurLong(wk.avgSci)}</span></div>`;
+    html += `<div class="wk-row"><span class="lbl">مجموع هفته</span><span class="val">${formatDurLong(wk.total)}</span></div>`;
+    if (wk.totalWasted > 0) {
+      html += `<div class="wk-row wasted"><span class="lbl">جمع تلف‌شده</span><span class="val">${formatDurLong(wk.totalWasted)}</span></div>`;
+      html += `<div class="wk-row wasted"><span class="lbl">میانگین تلف روزانه</span><span class="val">${formatDurLong(wk.totalWasted/Math.max(1,wk.divisor))}</span></div>`;
+    }
+    html += `</div>`;
+  });
+  return html;
+}
+
+/* ============ متن خلاصه ============ */
+function buildTextFor(range) {
+  const dateStr2 = new Date().toLocaleDateString('fa-IR', { weekday:'long', day:'numeric', month:'long' });
+
+  if (range === 'today') {
+    const s = calcStats('today');
+    if (!s.tasks.length) return `📋 خلاصه امروز — ${dateStr2}\n\nچیزی ثبت نشده.`;
+    const lines = [`📋 خلاصه امروز — ${dateStr2}`, '━━━━━━━━━━━━━━━'];
+    Object.entries(s.byCat).sort((a,b) => b[1] - a[1]).forEach(([n, m]) => lines.push('   • ' + n + ': ' + formatDurLong(m)));
+    lines.push('📚 علمی: ' + formatDurLong(s.totalSci));
+    lines.push('✅ ثبت‌شده: ' + formatDurLong(s.total));
+    if (s.totalWasted > 0) lines.push('⛔ تلف‌شده: ' + formatDurLong(s.totalWasted));
+    return lines.join('\n');
+  }
+
+  if (range === 'week') {
+    const wk = weekStats(startOfIranianWeek());
+    if (!Object.keys(wk.byCat).length) return `📋 خلاصه این هفته\n\nچیزی ثبت نشده.`;
+
+    const lines = [`📋 خلاصه این هفته (${wk.divisor} روز ثبت‌شده — بدون جمعه)`, '━━━━━━━━━━━━━━━'];
+
+    const dayDates = satThuDates(startOfIranianWeek());
+    const dayNames = ['شنبه','یکشنبه','دوشنبه','سه‌شنبه','چهارشنبه','پنجشنبه'];
+    const sciPerDay = dayDates.map(d => logs.filter(l => l.date === d && isScientific(l)).reduce((s,l)=>s+durOf(l),0));
+    const maxSci = Math.max(...sciPerDay, 1);
+    lines.push('📈 نمودار ساعات علمی هر روز:');
+    sciPerDay.forEach((m, i) => {
+      const h = Math.floor(m/60), mm = Math.round(m%60);
+      const label = h>0 ? `${h}:${String(mm).padStart(2,'0')}` : `${mm}د`;
+      const bars = '█'.repeat(Math.max(1, Math.round(m / maxSci * 15)));
+      lines.push(`   ${dayNames[i].padEnd(8)} ${bars} ${label}`);
+    });
+    lines.push('');
+
+    lines.push('⏱ جمع دسته‌ها:');
+    Object.entries(wk.byCat).sort((a,b) => b[1] - a[1]).forEach(([n, m]) => lines.push('   • ' + n + ': ' + formatDurLong(m)));
+    lines.push('');
+    lines.push(`📈 میانگین روزانه (بر پایه ${wk.divisor} روز ثبت‌شده):`);
+    Object.entries(wk.avgByCat).sort((a,b) => b[1] - a[1]).forEach(([n, m]) => lines.push('   • ' + n + ': ' + formatDurLong(m)));
+    lines.push('');
+    lines.push('📚 علمی هفته: ' + formatDurLong(wk.totalSci));
+    lines.push('📈 میانگین علمی روزانه: ' + formatDurLong(wk.avgSci));
+
+    if (wk.totalWasted > 0) {
+      lines.push('');
+      lines.push('⛔ تلف شده:');
+      lines.push('   • جمع: ' + formatDurLong(wk.totalWasted));
+      if (wk.divisor > 0) lines.push('   • میانگین روزانه: ' + formatDurLong(wk.totalWasted / wk.divisor));
+    }
+    lines.push('━━━━━━━━━━━━━━━');
+    lines.push('✅ ثبت‌شده: ' + formatDurLong(wk.total));
+    return lines.join('\n');
+  }
+
+  const weeks = allWeeksWithData();
+  if (!weeks.length) return `📋 تاریخچه هفتگی\n\nچیزی ثبت نشده.`;
+  const lines = ['📋 تاریخچه هفتگی (بدون جمعه‌ها)', '━━━━━━━━━━━━━━━'];
+  weeks.forEach(ws => {
+    const wk = weekStats(ws);
+    lines.push('');
+    lines.push('📅 هفته ' + faDate(ws) + ' — ' + wk.divisor + ' روز ثبت‌شده');
+    Object.entries(wk.avgByCat).sort((a,b) => b[1] - a[1]).forEach(([n, m]) => {
+      lines.push('   • میانگین ' + n + ': ' + formatDurLong(m));
+    });
+    lines.push('   • 📚 علمی هفته: ' + formatDurLong(wk.totalSci));
+    lines.push('   • 📈 میانگین علمی: ' + formatDurLong(wk.avgSci));
+    lines.push('   • مجموع: ' + formatDurLong(wk.total));
+    if (wk.totalWasted > 0) lines.push('   • تلف‌شده: ' + formatDurLong(wk.totalWasted));
+  });
+  return lines.join('\n');
+}
+
+function refreshSummary() {
+  if (currentRange === 'today') summaryBody.innerHTML = buildTodayHTML();
+  else if (currentRange === 'week') summaryBody.innerHTML = buildWeekHTML();
+  else summaryBody.innerHTML = buildAllHTML();
+  summaryText.textContent = buildTextFor(currentRange);
+  document.querySelectorAll('.tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.range === currentRange);
+  });
+}
+
+document.getElementById('btnSummary').onclick = () => {
+  currentRange = 'today';
+  refreshSummary();
+  modal.classList.add('open');
+};
+document.getElementById('btnClose').onclick = () => modal.classList.remove('open');
+document.querySelectorAll('.tab').forEach(t => {
+  t.onclick = () => { currentRange = t.dataset.range; refreshSummary(); };
+});
+
+document.getElementById('btnCopy').onclick = async () => {
+  try {
+    await navigator.clipboard.writeText(summaryText.textContent);
+    const b = document.getElementById('btnCopy');
+    b.textContent = '✓ کپی شد';
+    setTimeout(() => b.textContent = 'کپی متن', 1500);
+  } catch { alert('کپی نشد.'); }
+};
+document.getElementById('btnShare').onclick = async () => {
+  const text = summaryText.textContent;
+  if (navigator.share) { try { await navigator.share({ title: 'خلاصه کارها', text }); } catch {} }
+  else { await navigator.clipboard.writeText(text); alert('متن کپی شد.'); }
+};
+
+/* ============ CSV ============ */
+function downloadCSV(range) {
+  const toHM = m => Math.floor(m/60) + ':' + String(Math.round(m%60)).padStart(2,'0');
+  const rows = [];
+
+  if (range === 'today') {
+    const s = calcStats('today');
+    if (!s.tasks.length) { alert('امروز چیزی ثبت نشده.'); return; }
+    rows.push(['خلاصه امروز — ' + todayStr()]);
+    rows.push(['دسته', 'مدت (دقیقه)', 'مدت (ساعت:دقیقه)']);
+    Object.entries(s.byCat).sort((a,b) => b[1] - a[1]).forEach(([n, m]) => rows.push([n, m, toHM(m)]));
+    rows.push(['📚 علمی', s.totalSci, toHM(s.totalSci)]);
+    rows.push(['جمع ثبت‌شده', s.total, toHM(s.total)]);
+    rows.push(['تلف‌شده', s.totalWasted, toHM(s.totalWasted)]);
+  } else if (range === 'week') {
+    const wk = weekStats(startOfIranianWeek());
+    if (!Object.keys(wk.byCat).length) { alert('این هفته چیزی ثبت نشده.'); return; }
+
+    const dayDates = satThuDates(startOfIranianWeek());
+    const dayNames = ['شنبه','یکشنبه','دوشنبه','سه‌شنبه','چهارشنبه','پنجشنبه'];
+    const sciPerDay = dayDates.map(d => logs.filter(l => l.date === d && isScientific(l)).reduce((s,l)=>s+durOf(l),0));
+    rows.push(['نمودار ساعات علمی هر روز']);
+    rows.push(['روز', 'تاریخ', 'دقیقه', 'ساعت:دقیقه']);
+    sciPerDay.forEach((m, i) => rows.push([dayNames[i], dayDates[i], m, toHM(m)]));
+    rows.push([]);
+
+    rows.push(['خلاصه هفته ' + wk.weekStart + ' تا ' + wk.weekEnd + ' (' + wk.divisor + ' روز ثبت‌شده، بدون جمعه)']);
+    rows.push(['دسته', 'جمع (دقیقه)', 'جمع (ساعت:دقیقه)', 'میانگین روزانه (دقیقه)', 'میانگین روزانه (ساعت:دقیقه)']);
+    Object.entries(wk.byCat).sort((a,b) => b[1] - a[1]).forEach(([n, m]) => {
+      const avg = wk.divisor > 0 ? m / wk.divisor : 0;
+      rows.push([n, m, toHM(m), Math.round(avg), toHM(avg)]);
+    });
+    rows.push(['📚 علمی', wk.totalSci, toHM(wk.totalSci), Math.round(wk.avgSci), toHM(wk.avgSci)]);
+    rows.push(['جمع کل', wk.total, toHM(wk.total), Math.round(wk.total/Math.max(1,wk.divisor)), toHM(wk.total/Math.max(1,wk.divisor))]);
+    rows.push(['تلف‌شده', wk.totalWasted, toHM(wk.totalWasted), Math.round(wk.totalWasted/Math.max(1,wk.divisor)), toHM(wk.totalWasted/Math.max(1,wk.divisor))]);
+  } else {
+    const weeks = allWeeksWithData();
+    if (!weeks.length) { alert('چیزی ثبت نشده.'); return; }
+    rows.push(['تاریخچه هفتگی (بدون جمعه)']);
+    rows.push(['هفته (شنبه)', 'تعداد روز ثبت‌شده', 'دسته', 'میانگین روزانه (دقیقه)', 'میانگین روزانه (ساعت:دقیقه)', 'جمع هفته (دقیقه)']);
+    weeks.forEach(ws => {
+      const wk = weekStats(ws);
+      Object.entries(wk.avgByCat).sort((a,b) => b[1] - a[1]).forEach(([n, avg]) => {
+        rows.push([ws, wk.divisor, n, Math.round(avg), toHM(avg), Math.round(avg * wk.divisor)]);
+      });
+      rows.push([ws, wk.divisor, '📚 علمی', Math.round(wk.avgSci), toHM(wk.avgSci), wk.totalSci]);
+      rows.push([ws, wk.divisor, '__جمع__', Math.round(wk.total/Math.max(1,wk.divisor)), toHM(wk.total/Math.max(1,wk.divisor)), wk.total]);
+      rows.push([ws, wk.divisor, '__تلف‌شده__', Math.round(wk.totalWasted/Math.max(1,wk.divisor)), toHM(wk.totalWasted/Math.max(1,wk.divisor)), wk.totalWasted]);
+      rows.push([]);
+    });
+  }
+
+  const csv = '\uFEFF' + rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const names = { today: 'today', week: 'week', all: 'weekly-history' };
+  a.href = url;
+  a.download = `karlog-${names[range]}-${todayStr()}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+document.getElementById('btnCsv').onclick = () => downloadCSV(currentRange);
+
+/* ============ فرم ============ */
+form.addEventListener('submit', e => {
+  e.preventDefault();
+  const s = startEl.value, en = endEl.value;
+  if (toMin(en) <= toMin(s)) { alert('ساعت پایان باید بعد از شروع باشه.'); return; }
+  if (!categoryEl.value) { alert('دسته رو انتخاب کن.'); return; }
+  logs.push({
+    id: Date.now(),
+    title: titleEl.value.trim(),
+    category: categoryEl.value,
+    start: s,
+    end: en,
+    date: todayStr()
+  });
+  save(); render();
+  form.reset(); titleEl.focus();
+});
+
+render();
+</script>
+</body>
+</html>
