@@ -19,7 +19,9 @@
   .col { display:flex; flex-direction:column; }
   .submit { background:#2563eb; color:white; border:none; cursor:pointer; grid-column:1 / -1; font-size:16px; font-weight:bold; padding:14px; }
   .toolbar { display:flex; gap:8px; margin-top:14px; }
-  .toolbar button { flex:1; padding:14px; border-radius:10px; border:none; cursor:pointer; font-size:15px; font-weight:bold; font-family:inherit; background:#059669; color:white; }
+  .toolbar button { flex:1; padding:14px; border-radius:10px; border:none; cursor:pointer; font-size:15px; font-weight:bold; font-family:inherit; }
+  .btn-summary { background:#059669; color:white; }
+  .btn-backup  { background:#f59e0b; color:white; }
   .day { margin-top:20px; }
   .day h2 { font-size:15px; color:#475569; border-bottom:1px solid #e2e8f0; padding-bottom:6px; margin:0 0 8px; }
   .day.friday h2 { color:#9333ea; }
@@ -78,6 +80,15 @@
   .btn-csv   { background:#7c3aed; color:white; }
   .btn-close { background:#e2e8f0; color:#0f172a; }
   pre.hidden { display:none; }
+
+  /* مودال پشتیبان */
+  .bk-section { margin-bottom:16px; padding:14px; border:2px dashed #cbd5e1; border-radius:12px; text-align:center; }
+  .bk-section h4 { margin:0 0 8px; font-size:15px; color:#1e293b; }
+  .bk-section p { margin:0 0 12px; font-size:12px; color:#64748b; line-height:1.7; }
+  .bk-section button { padding:12px; border-radius:10px; border:none; cursor:pointer; font-size:14px; font-weight:bold; font-family:inherit; width:100%; }
+  .btn-dl { background:#f59e0b; color:white; }
+  .btn-ul { background:#10b981; color:white; }
+  .bk-warn { background:#fef3c7; color:#78350f; padding:10px; border-radius:8px; font-size:12px; margin-bottom:14px; line-height:1.7; }
 </style>
 </head>
 <body>
@@ -104,13 +115,15 @@
   </form>
 
   <div class="toolbar">
-    <button id="btnSummary">📊 خلاصه و جمع‌بندی</button>
+    <button id="btnSummary" class="btn-summary">📊 خلاصه</button>
+    <button id="btnBackup" class="btn-backup">💾 پشتیبان</button>
   </div>
 
   <div id="days"></div>
   <p id="total"></p>
 </div>
 
+<!-- مودال خلاصه -->
 <div class="modal" id="modal">
   <div class="modal-inner">
     <div class="tabs">
@@ -129,8 +142,34 @@
   </div>
 </div>
 
+<!-- مودال پشتیبان -->
+<div class="modal" id="backupModal">
+  <div class="modal-inner">
+    <h3 style="margin:0 0 12px; font-size:16px; text-align:center">💾 پشتیبان‌گیری و بازیابی</h3>
+    <div class="bk-warn">
+      ⚠️ <strong>مهم:</strong> اگه می‌خوای داده‌هات همیشه محفوظ بمونن، <strong>هر چند وقت یه بار</strong> پشتیبان بگیر و توی گوگل‌درایو یا تلگرام (Saved Messages) ذخیره کن.
+    </div>
+
+    <div class="bk-section">
+      <h4>📥 گرفتن پشتیبان</h4>
+      <p>همه رکوردها توی یک فایل ذخیره می‌شن.<br>مکان پیشنهادی: گوگل‌درایو یا تلگرام Saved Messages.</p>
+      <button class="btn-dl" id="btnDownload">دانلود فایل پشتیبان</button>
+    </div>
+
+    <div class="bk-section">
+      <h4>📤 بازیابی از پشتیبان</h4>
+      <p>فایل پشتیبان قبلی رو انتخاب کن.<br><strong>به رکوردهای فعلی اضافه می‌شه</strong> (حذف نمی‌شن).</p>
+      <input type="file" id="fileInput" accept=".json,.csv" style="display:none">
+      <button class="btn-ul" id="btnUpload">انتخاب فایل پشتیبان</button>
+    </div>
+
+    <div class="modal-btns">
+      <button class="btn-close" id="btnBackupClose" style="grid-column:1 / -1">بستن</button>
+    </div>
+  </div>
+</div>
+
 <script>
-/* ============ تنظیمات ============ */
 const CATEGORIES = ['خواب','مطالعه','غیردرسی','مباحثه','شخصی','تلف شده','تفریح و ورزش','عبادت','کلاس'];
 const SCIENTIFIC_CATS = ['مطالعه','غیردرسی','مباحثه','کلاس'];
 const DAY_MIN = 24 * 60;
@@ -144,6 +183,7 @@ const endEl = document.getElementById('end');
 const daysEl = document.getElementById('days');
 const totalEl = document.getElementById('total');
 const modal = document.getElementById('modal');
+const backupModal = document.getElementById('backupModal');
 const summaryBody = document.getElementById('summaryBody');
 const summaryText = document.getElementById('summaryText');
 
@@ -317,7 +357,6 @@ function calcStats(range) {
     }
   });
 
-  // ⬅ روزهای دارای رکورد
   const days = Object.keys(byDay).sort();
   const dayCount = days.length;
 
@@ -339,7 +378,6 @@ function calcStats(range) {
   };
 }
 
-/* ============ آمار هفتگی ============ */
 function weekStats(weekStart) {
   const startStr = typeof weekStart === 'string' ? weekStart : dateStr(weekStart);
   const startDate = new Date(startStr);
@@ -365,7 +403,6 @@ function weekStats(weekStart) {
     }
   });
 
-  // ⬅ مبنای میانگین: فقط روزهایی که توشون رکورد ثبت شده
   const daysWithData = Object.keys(byDay);
   const divisor = daysWithData.length;
 
@@ -402,7 +439,7 @@ function allWeeksWithData() {
   return [...set].sort().reverse();
 }
 
-/* ============ نمودار خطی ============ */
+/* ============ نمودار ============ */
 function buildScientificChart(weekStart) {
   const start = weekStart || startOfIranianWeek();
   const dayDates = satThuDates(start);
@@ -461,13 +498,13 @@ function buildScientificChart(weekStart) {
   return `
     <div class="chart-wrap">
       <h4>📈 نمودار خطی — ساعات علمی هر روز</h4>
-      <div class="sub">عدد روی هر نقطه = ساعت علمی آن روز | <span style="color:#dc2626">قرمز = امروز</span> | علمی = مطالعه + غیردرسی + مباحثه + کلاس</div>
+      <div class="sub">عدد روی هر نقطه = ساعت علمی آن روز | <span style="color:#dc2626">قرمز = امروز</span></div>
       ${svg}
     </div>
   `;
 }
 
-/* ============ خلاصه امروز ============ */
+/* ============ خلاصه‌ها ============ */
 function buildTodayHTML() {
   const s = calcStats('today');
   if (!s.tasks.length) return `<div class="grand">امروز چیزی ثبت نشده</div>`;
@@ -487,7 +524,6 @@ function buildTodayHTML() {
   return html;
 }
 
-/* ============ خلاصه این هفته ============ */
 function buildWeekHTML() {
   const wk = weekStats(startOfIranianWeek());
   if (!Object.keys(wk.byCat).length) return buildScientificChart() + `<div class="grand">این هفته چیزی ثبت نشده</div>`;
@@ -501,7 +537,7 @@ function buildWeekHTML() {
   });
   html += `</div>`;
 
-  html += `<div class="summary-section"><h3>📈 میانگین روزانه این هفته <span>بر پایه ${wk.divisor} روز ثبت‌شده</span></h3>`;
+  html += `<div class="summary-section"><h3>📈 میانگین روزانه <span>${wk.divisor} روز ثبت‌شده</span></h3>`;
   Object.entries(wk.avgByCat).sort((a,b) => b[1] - a[1]).forEach(([name, min]) => {
     const cls = SCIENTIFIC_CATS.includes(name) ? ' sci' : (name === 'تلف شده' ? ' waste' : '');
     html += `<div class="activity-row${cls} avg"><strong>${escapeHtml(name)}</strong><span class="dur">${formatDurLong(min)}</span></div>`;
@@ -524,7 +560,6 @@ function buildWeekHTML() {
   return html;
 }
 
-/* ============ تاریخچه هفتگی ============ */
 function buildAllHTML() {
   const weeks = allWeeksWithData();
   if (!weeks.length) return `<div class="grand">هنوز چیزی ثبت نشده</div>`;
@@ -533,7 +568,7 @@ function buildAllHTML() {
   weeks.forEach(ws => {
     const wk = weekStats(ws);
     html += `<div class="week-card">`;
-    html += `<h4><span>هفته ${faDate(ws)}</span><span>${wk.divisor} روز ثبت‌شده</span></h4>`;
+    html += `<h4><span>هفته ${faDate(ws)}</span><span>${wk.divisor} روز</span></h4>`;
 
     Object.entries(wk.avgByCat).sort((a,b) => b[1] - a[1]).forEach(([name, min]) => {
       const cls = SCIENTIFIC_CATS.includes(name) ? ' sci' : (name === 'تلف شده' ? ' wasted' : '');
@@ -541,18 +576,16 @@ function buildAllHTML() {
     });
 
     html += `<div class="wk-row sci"><span class="lbl">📚 علمی هفته</span><span class="val">${formatDurLong(wk.totalSci)}</span></div>`;
-    html += `<div class="wk-row sci"><span class="lbl">📈 میانگین علمی روزانه</span><span class="val">${formatDurLong(wk.avgSci)}</span></div>`;
+    html += `<div class="wk-row sci"><span class="lbl">📈 میانگین علمی</span><span class="val">${formatDurLong(wk.avgSci)}</span></div>`;
     html += `<div class="wk-row"><span class="lbl">مجموع هفته</span><span class="val">${formatDurLong(wk.total)}</span></div>`;
     if (wk.totalWasted > 0) {
       html += `<div class="wk-row wasted"><span class="lbl">جمع تلف‌شده</span><span class="val">${formatDurLong(wk.totalWasted)}</span></div>`;
-      html += `<div class="wk-row wasted"><span class="lbl">میانگین تلف روزانه</span><span class="val">${formatDurLong(wk.totalWasted/Math.max(1,wk.divisor))}</span></div>`;
     }
     html += `</div>`;
   });
   return html;
 }
 
-/* ============ متن خلاصه ============ */
 function buildTextFor(range) {
   const dateStr2 = new Date().toLocaleDateString('fa-IR', { weekday:'long', day:'numeric', month:'long' });
 
@@ -572,7 +605,6 @@ function buildTextFor(range) {
     if (!Object.keys(wk.byCat).length) return `📋 خلاصه این هفته\n\nچیزی ثبت نشده.`;
 
     const lines = [`📋 خلاصه این هفته (${wk.divisor} روز ثبت‌شده — بدون جمعه)`, '━━━━━━━━━━━━━━━'];
-
     const dayDates = satThuDates(startOfIranianWeek());
     const dayNames = ['شنبه','یکشنبه','دوشنبه','سه‌شنبه','چهارشنبه','پنجشنبه'];
     const sciPerDay = dayDates.map(d => logs.filter(l => l.date === d && isScientific(l)).reduce((s,l)=>s+durOf(l),0));
@@ -585,21 +617,18 @@ function buildTextFor(range) {
       lines.push(`   ${dayNames[i].padEnd(8)} ${bars} ${label}`);
     });
     lines.push('');
-
     lines.push('⏱ جمع دسته‌ها:');
     Object.entries(wk.byCat).sort((a,b) => b[1] - a[1]).forEach(([n, m]) => lines.push('   • ' + n + ': ' + formatDurLong(m)));
     lines.push('');
-    lines.push(`📈 میانگین روزانه (بر پایه ${wk.divisor} روز ثبت‌شده):`);
+    lines.push(`📈 میانگین روزانه (${wk.divisor} روز):`);
     Object.entries(wk.avgByCat).sort((a,b) => b[1] - a[1]).forEach(([n, m]) => lines.push('   • ' + n + ': ' + formatDurLong(m)));
     lines.push('');
     lines.push('📚 علمی هفته: ' + formatDurLong(wk.totalSci));
     lines.push('📈 میانگین علمی روزانه: ' + formatDurLong(wk.avgSci));
-
     if (wk.totalWasted > 0) {
       lines.push('');
       lines.push('⛔ تلف شده:');
       lines.push('   • جمع: ' + formatDurLong(wk.totalWasted));
-      if (wk.divisor > 0) lines.push('   • میانگین روزانه: ' + formatDurLong(wk.totalWasted / wk.divisor));
     }
     lines.push('━━━━━━━━━━━━━━━');
     lines.push('✅ ثبت‌شده: ' + formatDurLong(wk.total));
@@ -612,13 +641,12 @@ function buildTextFor(range) {
   weeks.forEach(ws => {
     const wk = weekStats(ws);
     lines.push('');
-    lines.push('📅 هفته ' + faDate(ws) + ' — ' + wk.divisor + ' روز ثبت‌شده');
+    lines.push('📅 هفته ' + faDate(ws) + ' — ' + wk.divisor + ' روز');
     Object.entries(wk.avgByCat).sort((a,b) => b[1] - a[1]).forEach(([n, m]) => {
       lines.push('   • میانگین ' + n + ': ' + formatDurLong(m));
     });
     lines.push('   • 📚 علمی هفته: ' + formatDurLong(wk.totalSci));
     lines.push('   • 📈 میانگین علمی: ' + formatDurLong(wk.avgSci));
-    lines.push('   • مجموع: ' + formatDurLong(wk.total));
     if (wk.totalWasted > 0) lines.push('   • تلف‌شده: ' + formatDurLong(wk.totalWasted));
   });
   return lines.join('\n');
@@ -672,27 +700,20 @@ function downloadCSV(range) {
     rows.push(['📚 علمی', s.totalSci, toHM(s.totalSci)]);
     rows.push(['جمع ثبت‌شده', s.total, toHM(s.total)]);
     rows.push(['تلف‌شده', s.totalWasted, toHM(s.totalWasted)]);
+    rows.push([]);
+    rows.push(['لیست رکوردها']);
+    rows.push(['تاریخ','شروع','پایان','کار','دسته','مدت (دقیقه)']);
+    s.tasks.forEach(t => rows.push([t.date, t.start, t.end, t.title || '', (t.category||'').trim(), durOf(t)]));
   } else if (range === 'week') {
     const wk = weekStats(startOfIranianWeek());
     if (!Object.keys(wk.byCat).length) { alert('این هفته چیزی ثبت نشده.'); return; }
-
-    const dayDates = satThuDates(startOfIranianWeek());
-    const dayNames = ['شنبه','یکشنبه','دوشنبه','سه‌شنبه','چهارشنبه','پنجشنبه'];
-    const sciPerDay = dayDates.map(d => logs.filter(l => l.date === d && isScientific(l)).reduce((s,l)=>s+durOf(l),0));
-    rows.push(['نمودار ساعات علمی هر روز']);
-    rows.push(['روز', 'تاریخ', 'دقیقه', 'ساعت:دقیقه']);
-    sciPerDay.forEach((m, i) => rows.push([dayNames[i], dayDates[i], m, toHM(m)]));
-    rows.push([]);
-
-    rows.push(['خلاصه هفته ' + wk.weekStart + ' تا ' + wk.weekEnd + ' (' + wk.divisor + ' روز ثبت‌شده، بدون جمعه)']);
+    rows.push(['خلاصه هفته ' + wk.weekStart + ' تا ' + wk.weekEnd + ' (' + wk.divisor + ' روز ثبت‌شده)']);
     rows.push(['دسته', 'جمع (دقیقه)', 'جمع (ساعت:دقیقه)', 'میانگین روزانه (دقیقه)', 'میانگین روزانه (ساعت:دقیقه)']);
     Object.entries(wk.byCat).sort((a,b) => b[1] - a[1]).forEach(([n, m]) => {
       const avg = wk.divisor > 0 ? m / wk.divisor : 0;
       rows.push([n, m, toHM(m), Math.round(avg), toHM(avg)]);
     });
     rows.push(['📚 علمی', wk.totalSci, toHM(wk.totalSci), Math.round(wk.avgSci), toHM(wk.avgSci)]);
-    rows.push(['جمع کل', wk.total, toHM(wk.total), Math.round(wk.total/Math.max(1,wk.divisor)), toHM(wk.total/Math.max(1,wk.divisor))]);
-    rows.push(['تلف‌شده', wk.totalWasted, toHM(wk.totalWasted), Math.round(wk.totalWasted/Math.max(1,wk.divisor)), toHM(wk.totalWasted/Math.max(1,wk.divisor))]);
   } else {
     const weeks = allWeeksWithData();
     if (!weeks.length) { alert('چیزی ثبت نشده.'); return; }
@@ -704,8 +725,6 @@ function downloadCSV(range) {
         rows.push([ws, wk.divisor, n, Math.round(avg), toHM(avg), Math.round(avg * wk.divisor)]);
       });
       rows.push([ws, wk.divisor, '📚 علمی', Math.round(wk.avgSci), toHM(wk.avgSci), wk.totalSci]);
-      rows.push([ws, wk.divisor, '__جمع__', Math.round(wk.total/Math.max(1,wk.divisor)), toHM(wk.total/Math.max(1,wk.divisor)), wk.total]);
-      rows.push([ws, wk.divisor, '__تلف‌شده__', Math.round(wk.totalWasted/Math.max(1,wk.divisor)), toHM(wk.totalWasted/Math.max(1,wk.divisor)), wk.totalWasted]);
       rows.push([]);
     });
   }
@@ -721,6 +740,112 @@ function downloadCSV(range) {
   URL.revokeObjectURL(url);
 }
 document.getElementById('btnCsv').onclick = () => downloadCSV(currentRange);
+
+/* ============ پشتیبان‌گیری و بازیابی ============ */
+document.getElementById('btnBackup').onclick = () => {
+  backupModal.classList.add('open');
+};
+document.getElementById('btnBackupClose').onclick = () => {
+  backupModal.classList.remove('open');
+};
+
+document.getElementById('btnDownload').onclick = () => {
+  if (!logs.length) { alert('چیزی برای پشتیبان‌گیری نیست.'); return; }
+  const data = {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    count: logs.length,
+    logs: logs
+  };
+  const json = JSON.stringify(data, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `karlog-backup-${todayStr()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  setTimeout(() => {
+    backupModal.classList.remove('open');
+    alert('فایل پشتیبان دانلود شد.\n\nلطفاً اون رو توی گوگل‌درایو یا تلگرام (Saved Messages) ذخیره کن.');
+  }, 500);
+};
+
+document.getElementById('btnUpload').onclick = () => {
+  document.getElementById('fileInput').click();
+};
+
+document.getElementById('fileInput').onchange = (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const content = ev.target.result;
+      let imported = [];
+
+      if (file.name.endsWith('.json')) {
+        const data = JSON.parse(content);
+        if (Array.isArray(data)) imported = data;
+        else if (data.logs && Array.isArray(data.logs)) imported = data.logs;
+        else throw new Error('ساختار فایل JSON نامعتبر');
+      } else {
+        // CSV قدیمی — فقط اگه بخش «لیست رکوردها» داشته باشه
+        const lines = content.split('\n');
+        let inRecords = false;
+        for (const line of lines) {
+          if (line.includes('لیست رکوردها')) { inRecords = true; continue; }
+          if (!inRecords) continue;
+          if (line.trim() === '') continue;
+          // پرش از سرستون
+          if (line.includes('شروع') && line.includes('پایان')) continue;
+          const cols = line.split(',').map(s => s.replace(/^"|"$/g, '').replace(/""/g, '"'));
+          if (cols.length < 5) continue;
+          const [date, start, end, title, category] = cols;
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
+          if (!/^\d{2}:\d{2}$/.test(start) || !/^\d{2}:\d{2}$/.test(end)) continue;
+          imported.push({
+            id: Date.now() + Math.random(),
+            date, start, end,
+            title: title || '',
+            category: category || 'شخصی'
+          });
+        }
+        if (!imported.length) throw new Error('هیچ رکورد معتبری توی فایل CSV پیدا نشد. لطفاً از پشتیبان JSON استفاده کن.');
+      }
+
+      if (!imported.length) { alert('فایل خالیه یا رکوردی نداره.'); return; }
+
+      // فیلتر تکراری‌ها (بر اساس ترکیب date+start+end+title+category)
+      const existing = new Set(logs.map(l => `${l.date}|${l.start}|${l.end}|${l.title||''}|${l.category||''}`));
+      let added = 0, skipped = 0;
+      imported.forEach(l => {
+        const key = `${l.date}|${l.start}|${l.end}|${l.title||''}|${l.category||''}`;
+        if (existing.has(key)) { skipped++; return; }
+        logs.push({
+          id: l.id || Date.now() + Math.random(),
+          date: l.date,
+          start: l.start,
+          end: l.end,
+          title: l.title || '',
+          category: l.category || 'شخصی'
+        });
+        existing.add(key);
+        added++;
+      });
+
+      save();
+      render();
+      backupModal.classList.remove('open');
+      alert(`✅ ${added} رکورد اضافه شد.\n${skipped ? '⏭ ' + skipped + ' رکورد تکراری نادیده گرفته شد.' : ''}`);
+    } catch (err) {
+      alert('خطا در خواندن فایل:\n' + err.message);
+    }
+  };
+  reader.readAsText(file, 'utf-8');
+  e.target.value = '';
+};
 
 /* ============ فرم ============ */
 form.addEventListener('submit', e => {
