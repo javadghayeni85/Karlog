@@ -15,9 +15,15 @@
   select { background:white; appearance:none; background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'><path d='M2 4l4 4 4-4' fill='none' stroke='%2364748b' stroke-width='2'/></svg>"); background-repeat:no-repeat; background-position:left 12px center; background-size:14px; padding-left:36px; }
   .full { grid-column:1 / -1; }
   input[type="time"] { text-align:center; font-size:18px; }
+  input[type="date"] { text-align:center; }
   .label { font-size:12px; color:#64748b; margin-bottom:4px; text-align:center; }
   .col { display:flex; flex-direction:column; }
   .submit { background:#2563eb; color:white; border:none; cursor:pointer; grid-column:1 / -1; font-size:16px; font-weight:bold; padding:14px; }
+  .submit.editing { background:#f59e0b; }
+  .cancel-edit { background:#64748b; color:white; border:none; cursor:pointer; font-size:14px; font-weight:bold; padding:12px; border-radius:10px; margin-top:6px; display:none; }
+  .cancel-edit.show { display:block; }
+  .edit-banner { display:none; background:#fef3c7; border:1px solid #fcd34d; color:#78350f; padding:10px 12px; border-radius:10px; font-size:13px; text-align:center; margin-bottom:6px; }
+  .edit-banner.show { display:block; }
   .toolbar { display:flex; gap:8px; margin-top:14px; }
   .toolbar button { flex:1; padding:14px; border-radius:10px; border:none; cursor:pointer; font-size:15px; font-weight:bold; font-family:inherit; }
   .btn-summary { background:#059669; color:white; }
@@ -81,7 +87,6 @@
   .btn-close { background:#e2e8f0; color:#0f172a; }
   pre.hidden { display:none; }
 
-  /* مودال پشتیبان */
   .bk-section { margin-bottom:16px; padding:14px; border:2px dashed #cbd5e1; border-radius:12px; text-align:center; }
   .bk-section h4 { margin:0 0 8px; font-size:15px; color:#1e293b; }
   .bk-section p { margin:0 0 12px; font-size:12px; color:#64748b; line-height:1.7; }
@@ -95,6 +100,10 @@
 <div class="box">
   <h1>ثبت کار انجام‌شده</h1>
 
+  <div class="edit-banner" id="editBanner">
+    ✏️ در حال ویرایش یک رکورد هستی. بعد از تغییر، دکمه <b>ذخیره تغییرات</b> رو بزن.
+  </div>
+
   <form id="taskForm">
     <input type="text" id="title" placeholder="توضیح (اختیاری)" autocomplete="off" class="full">
     <div class="col full">
@@ -102,6 +111,10 @@
       <select id="category" required>
         <option value="">انتخاب کن...</option>
       </select>
+    </div>
+    <div class="col full">
+      <div class="label">تاریخ</div>
+      <input type="date" id="date" required>
     </div>
     <div class="col">
       <div class="label">شروع</div>
@@ -111,7 +124,8 @@
       <div class="label">پایان</div>
       <input type="time" id="end" required>
     </div>
-    <button type="submit" class="submit">ثبت</button>
+    <button type="submit" class="submit" id="submitBtn">ثبت</button>
+    <button type="button" class="cancel-edit" id="cancelBtn">انصراف از ویرایش</button>
   </form>
 
   <div class="toolbar">
@@ -123,7 +137,6 @@
   <p id="total"></p>
 </div>
 
-<!-- مودال خلاصه -->
 <div class="modal" id="modal">
   <div class="modal-inner">
     <div class="tabs">
@@ -142,27 +155,23 @@
   </div>
 </div>
 
-<!-- مودال پشتیبان -->
 <div class="modal" id="backupModal">
   <div class="modal-inner">
     <h3 style="margin:0 0 12px; font-size:16px; text-align:center">💾 پشتیبان‌گیری و بازیابی</h3>
     <div class="bk-warn">
-      ⚠️ <strong>مهم:</strong> اگه می‌خوای داده‌هات همیشه محفوظ بمونن، <strong>هر چند وقت یه بار</strong> پشتیبان بگیر و توی گوگل‌درایو یا تلگرام (Saved Messages) ذخیره کن.
+      ⚠️ اگه می‌خوای داده‌هات همیشه محفوظ بمونن، هر چند وقت یه بار پشتیبان بگیر و توی گوگل‌درایو یا تلگرام ذخیره کن.
     </div>
-
     <div class="bk-section">
       <h4>📥 گرفتن پشتیبان</h4>
-      <p>همه رکوردها توی یک فایل ذخیره می‌شن.<br>مکان پیشنهادی: گوگل‌درایو یا تلگرام Saved Messages.</p>
+      <p>همه رکوردها توی یک فایل ذخیره می‌شن.</p>
       <button class="btn-dl" id="btnDownload">دانلود فایل پشتیبان</button>
     </div>
-
     <div class="bk-section">
       <h4>📤 بازیابی از پشتیبان</h4>
-      <p>فایل پشتیبان قبلی رو انتخاب کن.<br><strong>به رکوردهای فعلی اضافه می‌شه</strong> (حذف نمی‌شن).</p>
+      <p>به رکوردهای فعلی اضافه می‌شه (حذف نمی‌شن).</p>
       <input type="file" id="fileInput" accept=".json,.csv" style="display:none">
       <button class="btn-ul" id="btnUpload">انتخاب فایل پشتیبان</button>
     </div>
-
     <div class="modal-btns">
       <button class="btn-close" id="btnBackupClose" style="grid-column:1 / -1">بستن</button>
     </div>
@@ -178,8 +187,12 @@ const WEEK_DAYS = 6;
 const form = document.getElementById('taskForm');
 const titleEl = document.getElementById('title');
 const categoryEl = document.getElementById('category');
+const dateEl = document.getElementById('date');
 const startEl = document.getElementById('start');
 const endEl = document.getElementById('end');
+const submitBtn = document.getElementById('submitBtn');
+const cancelBtn = document.getElementById('cancelBtn');
+const editBanner = document.getElementById('editBanner');
 const daysEl = document.getElementById('days');
 const totalEl = document.getElementById('total');
 const modal = document.getElementById('modal');
@@ -192,6 +205,7 @@ categoryEl.innerHTML = '<option value="">انتخاب کن...</option>' +
 
 let logs = JSON.parse(localStorage.getItem('myLogs') || '[]');
 let currentRange = 'today';
+let editingId = null;   // ⬅ اگه در حال ویرایش باشه، آیدی رکورد اینجاست
 
 function save() { localStorage.setItem('myLogs', JSON.stringify(logs)); }
 
@@ -234,7 +248,46 @@ function satThuDates(weekStart) {
 function isScientific(l) { return SCIENTIFIC_CATS.includes((l.category||'').trim()); }
 function durOf(l) { return Math.max(0, toMin(l.end) - toMin(l.start)); }
 
-/* ============ رندر لیست ============ */
+/* ============ تشخیص تداخل ============ */
+function findOverlap(date, start, end, excludeId) {
+  const s = toMin(start), en = toMin(end);
+  return logs.find(l => {
+    if (l.date !== date) return false;
+    if (excludeId && l.id === excludeId) return false;
+    const ls = toMin(l.start), le = toMin(l.end);
+    return s < le && en > ls;   // فرمول استاندارد تداخل
+  });
+}
+
+/* ============ شروع ویرایش ============ */
+function startEdit(task) {
+  editingId = task.id;
+  titleEl.value = task.title || '';
+  categoryEl.value = task.category || '';
+  dateEl.value = task.date || todayStr();
+  startEl.value = task.start;
+  endEl.value = task.end;
+  submitBtn.textContent = 'ذخیره تغییرات';
+  submitBtn.classList.add('editing');
+  cancelBtn.classList.add('show');
+  editBanner.classList.add('show');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  titleEl.focus();
+}
+
+function cancelEdit() {
+  editingId = null;
+  form.reset();
+  dateEl.value = todayStr();
+  submitBtn.textContent = 'ثبت';
+  submitBtn.classList.remove('editing');
+  cancelBtn.classList.remove('show');
+  editBanner.classList.remove('show');
+}
+
+cancelBtn.onclick = cancelEdit;
+
+/* ============ رندر ============ */
 function render() {
   const byDate = {};
   logs.forEach(l => { if (!byDate[l.date]) byDate[l.date] = []; byDate[l.date].push(l); });
@@ -273,19 +326,14 @@ function render() {
       acts.className = 'acts';
       const edit = document.createElement('button');
       edit.className = 'edit'; edit.textContent = '✏️';
-      edit.onclick = () => {
-        titleEl.value = task.title || '';
-        categoryEl.value = task.category || '';
-        startEl.value = task.start;
-        endEl.value = task.end;
-        logs = logs.filter(x => x.id !== task.id); save(); render();
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      };
+      edit.onclick = () => startEdit(task);
       const del = document.createElement('button');
       del.className = 'del'; del.textContent = '🗑';
       del.onclick = () => {
         if (!confirm('حذف شود؟')) return;
-        logs = logs.filter(x => x.id !== task.id); save(); render();
+        logs = logs.filter(x => x.id !== task.id);
+        if (editingId === task.id) cancelEdit();
+        save(); render();
       };
       acts.appendChild(edit); acts.appendChild(del); div.appendChild(acts); wrap.appendChild(div);
     });
@@ -335,10 +383,7 @@ function calcStats(range) {
       ? logs.filter(l => satThuDates(startOfIranianWeek()).includes(l.date))
       : logs.filter(l => !isFriday(l.date));
 
-  const byCat = {};
-  const byDay = {};
-  const sciByDay = {};
-  const wastedManualByDay = {};
+  const byCat = {}, byDay = {}, sciByDay = {}, wastedManualByDay = {};
   let total = 0, totalSci = 0, totalWastedManual = 0;
 
   tasks.forEach(l => {
@@ -359,7 +404,6 @@ function calcStats(range) {
 
   const days = Object.keys(byDay).sort();
   const dayCount = days.length;
-
   let autoWastedTotal = 0;
   const autoWastedByDay = {};
   days.forEach(d => {
@@ -741,22 +785,13 @@ function downloadCSV(range) {
 }
 document.getElementById('btnCsv').onclick = () => downloadCSV(currentRange);
 
-/* ============ پشتیبان‌گیری و بازیابی ============ */
-document.getElementById('btnBackup').onclick = () => {
-  backupModal.classList.add('open');
-};
-document.getElementById('btnBackupClose').onclick = () => {
-  backupModal.classList.remove('open');
-};
+/* ============ پشتیبان ============ */
+document.getElementById('btnBackup').onclick = () => backupModal.classList.add('open');
+document.getElementById('btnBackupClose').onclick = () => backupModal.classList.remove('open');
 
 document.getElementById('btnDownload').onclick = () => {
   if (!logs.length) { alert('چیزی برای پشتیبان‌گیری نیست.'); return; }
-  const data = {
-    version: 1,
-    exportedAt: new Date().toISOString(),
-    count: logs.length,
-    logs: logs
-  };
+  const data = { version: 2, exportedAt: new Date().toISOString(), count: logs.length, logs: logs };
   const json = JSON.stringify(data, null, 2);
   const blob = new Blob([json], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
@@ -771,72 +806,49 @@ document.getElementById('btnDownload').onclick = () => {
   }, 500);
 };
 
-document.getElementById('btnUpload').onclick = () => {
-  document.getElementById('fileInput').click();
-};
+document.getElementById('btnUpload').onclick = () => document.getElementById('fileInput').click();
 
 document.getElementById('fileInput').onchange = (e) => {
   const file = e.target.files[0];
   if (!file) return;
-
   const reader = new FileReader();
   reader.onload = (ev) => {
     try {
       const content = ev.target.result;
       let imported = [];
-
       if (file.name.endsWith('.json')) {
         const data = JSON.parse(content);
         if (Array.isArray(data)) imported = data;
         else if (data.logs && Array.isArray(data.logs)) imported = data.logs;
         else throw new Error('ساختار فایل JSON نامعتبر');
       } else {
-        // CSV قدیمی — فقط اگه بخش «لیست رکوردها» داشته باشه
         const lines = content.split('\n');
         let inRecords = false;
         for (const line of lines) {
           if (line.includes('لیست رکوردها')) { inRecords = true; continue; }
           if (!inRecords) continue;
           if (line.trim() === '') continue;
-          // پرش از سرستون
           if (line.includes('شروع') && line.includes('پایان')) continue;
           const cols = line.split(',').map(s => s.replace(/^"|"$/g, '').replace(/""/g, '"'));
           if (cols.length < 5) continue;
           const [date, start, end, title, category] = cols;
           if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
           if (!/^\d{2}:\d{2}$/.test(start) || !/^\d{2}:\d{2}$/.test(end)) continue;
-          imported.push({
-            id: Date.now() + Math.random(),
-            date, start, end,
-            title: title || '',
-            category: category || 'شخصی'
-          });
+          imported.push({ id: Date.now() + Math.random(), date, start, end, title: title || '', category: category || 'شخصی' });
         }
-        if (!imported.length) throw new Error('هیچ رکورد معتبری توی فایل CSV پیدا نشد. لطفاً از پشتیبان JSON استفاده کن.');
+        if (!imported.length) throw new Error('هیچ رکورد معتبری توی فایل CSV پیدا نشد.');
       }
-
       if (!imported.length) { alert('فایل خالیه یا رکوردی نداره.'); return; }
 
-      // فیلتر تکراری‌ها (بر اساس ترکیب date+start+end+title+category)
       const existing = new Set(logs.map(l => `${l.date}|${l.start}|${l.end}|${l.title||''}|${l.category||''}`));
       let added = 0, skipped = 0;
       imported.forEach(l => {
         const key = `${l.date}|${l.start}|${l.end}|${l.title||''}|${l.category||''}`;
         if (existing.has(key)) { skipped++; return; }
-        logs.push({
-          id: l.id || Date.now() + Math.random(),
-          date: l.date,
-          start: l.start,
-          end: l.end,
-          title: l.title || '',
-          category: l.category || 'شخصی'
-        });
-        existing.add(key);
-        added++;
+        logs.push({ id: l.id || Date.now() + Math.random(), date: l.date, start: l.start, end: l.end, title: l.title || '', category: l.category || 'شخصی' });
+        existing.add(key); added++;
       });
-
-      save();
-      render();
+      save(); render();
       backupModal.classList.remove('open');
       alert(`✅ ${added} رکورد اضافه شد.\n${skipped ? '⏭ ' + skipped + ' رکورد تکراری نادیده گرفته شد.' : ''}`);
     } catch (err) {
@@ -851,19 +863,56 @@ document.getElementById('fileInput').onchange = (e) => {
 form.addEventListener('submit', e => {
   e.preventDefault();
   const s = startEl.value, en = endEl.value;
+  const d = dateEl.value;
+  if (!d) { alert('تاریخ رو انتخاب کن.'); return; }
   if (toMin(en) <= toMin(s)) { alert('ساعت پایان باید بعد از شروع باشه.'); return; }
   if (!categoryEl.value) { alert('دسته رو انتخاب کن.'); return; }
-  logs.push({
-    id: Date.now(),
-    title: titleEl.value.trim(),
-    category: categoryEl.value,
-    start: s,
-    end: en,
-    date: todayStr()
-  });
-  save(); render();
-  form.reset(); titleEl.focus();
+
+  // ⬅ چک تداخل
+  const clash = findOverlap(d, s, en, editingId);
+  if (clash) {
+    const clashInfo = `${clash.start}–${clash.end}  ${clash.title || clash.category}`;
+    alert(`⛔ تداخل زمانی!\n\nاین بازه با یه رکورد دیگه تداخل داره:\n${clashInfo}\n\nلطفاً بازه رو اصلاح کن.`);
+    return;
+  }
+
+  if (editingId) {
+    // ویرایش رکورد موجود
+    const idx = logs.findIndex(x => x.id === editingId);
+    if (idx !== -1) {
+      logs[idx] = {
+        ...logs[idx],
+        title: titleEl.value.trim(),
+        category: categoryEl.value,
+        start: s,
+        end: en,
+        date: d
+      };
+    }
+    cancelEdit();
+    save(); render();
+    alert('✅ تغییرات ذخیره شد.');
+  } else {
+    // رکورد جدید
+    logs.push({
+      id: Date.now(),
+      title: titleEl.value.trim(),
+      category: categoryEl.value,
+      start: s,
+      end: en,
+      date: d
+    });
+    save(); render();
+    // فقط ساعت‌ها و توضیح پاک می‌شن، تاریخ و دسته می‌مونن برای ثبت سریع بعدی
+    titleEl.value = '';
+    startEl.value = '';
+    endEl.value = '';
+    titleEl.focus();
+  }
 });
+
+// مقدار پیش‌فرض تاریخ = امروز
+dateEl.value = todayStr();
 
 render();
 </script>
