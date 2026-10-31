@@ -15,8 +15,7 @@
   input, select, button { padding:14px; border-radius:10px; border:1px solid #ccc; font-family:inherit; font-size:16px; width:100%; }
   select { background:white; appearance:none; background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'><path d='M2 4l4 4 4-4' fill='none' stroke='%2364748b' stroke-width='2'/></svg>"); background-repeat:no-repeat; background-position:left 12px center; background-size:14px; padding-left:36px; }
   .full { grid-column:1 / -1; }
-  input[type="time"] { text-align:center; font-size:18px; }
-  input[type="date"] { text-align:center; }
+  input[type="time"], input[type="date"] { text-align:center; font-size:18px; }
   .label { font-size:12px; color:#64748b; margin-bottom:4px; text-align:center; }
   .col { display:flex; flex-direction:column; }
   .submit { background:#2563eb; color:white; border:none; cursor:pointer; grid-column:1 / -1; font-size:16px; font-weight:bold; padding:14px; }
@@ -29,6 +28,13 @@
   .toolbar button { flex:1; padding:14px; border-radius:10px; border:none; cursor:pointer; font-size:15px; font-weight:bold; font-family:inherit; }
   .btn-summary { background:#059669; color:white; }
   .btn-backup  { background:#f59e0b; color:white; }
+  
+  /* فیلتر تاریخ */
+  .filter-bar { display:flex; gap:8px; margin-top:16px; background:#f1f5f9; padding:10px; border-radius:12px; align-items:center; }
+  .filter-bar label { font-size:13px; font-weight:bold; color:#475569; white-space:nowrap; }
+  .filter-bar input { padding:8px; font-size:14px; text-align:center; flex:1; }
+  .filter-bar button { padding:8px 12px; font-size:13px; background:#cbd5e1; border:none; cursor:pointer; font-weight:bold; color:#334155; width:auto; }
+
   .day { margin-top:20px; }
   .day h2 { font-size:15px; color:#475569; border-bottom:1px solid #e2e8f0; padding-bottom:6px; margin:0 0 8px; }
   .day.friday h2 { color:#9333ea; }
@@ -134,6 +140,12 @@
     <button id="btnBackup" class="btn-backup">💾 پشتیبان</button>
   </div>
 
+  <div class="filter-bar">
+    <label>🔍 نمایش روز:</label>
+    <input type="date" id="filterDate">
+    <button type="button" id="btnClearFilter">همه</button>
+  </div>
+
   <div id="days"></div>
   <p id="total"></p>
 </div>
@@ -141,7 +153,7 @@
 <div class="modal" id="modal">
   <div class="modal-inner">
     <div class="tabs">
-      <button class="tab active" data-range="today">امروز</button>
+      <button class="tab active" data-range="day">روزانه</button>
       <button class="tab" data-range="week">این هفته</button>
       <button class="tab" data-range="all">تاریخچه هفتگی</button>
     </div>
@@ -200,13 +212,15 @@ const modal = document.getElementById('modal');
 const backupModal = document.getElementById('backupModal');
 const summaryBody = document.getElementById('summaryBody');
 const summaryText = document.getElementById('summaryText');
+const filterDateEl = document.getElementById('filterDate');
 
 categoryEl.innerHTML = '<option value="">انتخاب کن...</option>' +
   CATEGORIES.map(c => `<option value="${c}">${c}</option>`).join('');
 
 let logs = JSON.parse(localStorage.getItem('myLogs') || '[]');
-let currentRange = 'today';
+let currentRange = 'day';
 let editingId = null;
+let filterDateValue = ''; 
 
 function save() { localStorage.setItem('myLogs', JSON.stringify(logs)); }
 
@@ -249,6 +263,18 @@ function satThuDates(weekStart) {
 function isScientific(l) { return SCIENTIFIC_CATS.includes((l.category||'').trim()); }
 function durOf(l) { return Math.max(0, toMin(l.end) - toMin(l.start)); }
 
+// ⬅ محاسبه زمان مجاز روز بر اساس ساعت فعلی
+function getLimitForDate(dateStr) {
+  const today = todayStr();
+  if (dateStr === today) {
+    const now = new Date();
+    return now.getHours() * 60 + now.getMinutes();
+  } else if (dateStr < today) {
+    return 24 * 60; // روزهای گذشته ۲۴ ساعت
+  }
+  return 0;
+}
+
 function findOverlap(date, start, end, excludeId) {
   const s = toMin(start), en = toMin(end);
   return logs.find(l => {
@@ -286,10 +312,28 @@ function cancelEdit() {
 
 cancelBtn.onclick = cancelEdit;
 
+// ⬅ فیلتر تاریخ
+filterDateEl.onchange = (e) => {
+  filterDateValue = e.target.value;
+  render();
+};
+
+document.getElementById('btnClearFilter').onclick = () => {
+  filterDateValue = '';
+  filterDateEl.value = '';
+  render();
+};
+
 function render() {
   const byDate = {};
   logs.forEach(l => { if (!byDate[l.date]) byDate[l.date] = []; byDate[l.date].push(l); });
-  const dates = Object.keys(byDate).sort().reverse();
+  let dates = Object.keys(byDate).sort().reverse();
+  
+  // اگه فیلتر تاریخ فعاله، فقط همون روز
+  if (filterDateValue) {
+    dates = dates.filter(d => d === filterDateValue);
+  }
+
   daysEl.innerHTML = '';
   let totalAll = 0;
 
@@ -354,7 +398,9 @@ function render() {
       wrap.appendChild(sum);
 
       const nonWasted = dayTotal - dayWastedManual;
-      const totalWaste = Math.max(0, DAY_MIN - nonWasted);
+      const limit = getLimitForDate(date); // ⬅ استفاده از محدودیت هوشمند
+      const totalWaste = Math.max(0, limit - nonWasted);
+
       if (totalWaste > 0) {
         const w = document.createElement('div');
         w.className = 'daywaste';
@@ -370,24 +416,19 @@ function render() {
     }
     daysEl.appendChild(wrap);
   });
-  totalEl.textContent = dates.length ? 'جمع کل ثبت‌شده (بدون جمعه‌ها): ' + formatDurLong(totalAll) : '';
+  totalEl.textContent = dates.length ? 'جمع کل ثبت‌شده: ' + formatDurLong(totalAll) : 'هیچ رکوردی یافت نشد.';
 }
 
-function calcStats(range) {
-  const tasks = (range === 'today')
-    ? logs.filter(l => l.date === todayStr() && !isFriday(l.date))
-    : (range === 'week')
-      ? logs.filter(l => satThuDates(startOfIranianWeek()).includes(l.date))
-      : logs.filter(l => !isFriday(l.date));
-
-  const byCat = {}, byDay = {}, sciByDay = {}, wastedManualByDay = {};
+// ⬅ محاسبه آمار با توجه به محدودیت هوشمند تلف‌شده
+function calcStats(targetDate) {
+  const tasks = logs.filter(l => l.date === targetDate && !isFriday(l.date));
+  const byCat = {}, sciByDay = {}, wastedManualByDay = {};
   let total = 0, totalSci = 0, totalWastedManual = 0;
 
   tasks.forEach(l => {
     const dur = durOf(l);
     const cat = (l.category||'').trim();
     byCat[cat] = (byCat[cat] || 0) + dur;
-    byDay[l.date] = (byDay[l.date] || 0) + dur;
     total += dur;
     if (isScientific(l)) {
       sciByDay[l.date] = (sciByDay[l.date] || 0) + dur;
@@ -399,23 +440,16 @@ function calcStats(range) {
     }
   });
 
-  const days = Object.keys(byDay).sort();
-  const dayCount = days.length;
-  let autoWastedTotal = 0;
-  const autoWastedByDay = {};
-  days.forEach(d => {
-    const nonWasted = (byDay[d] || 0) - (wastedManualByDay[d] || 0);
-    const w = Math.max(0, DAY_MIN - nonWasted);
-    autoWastedByDay[d] = w;
-    autoWastedTotal += w;
-  });
+  const nonWasted = total - totalWastedManual;
+  const limit = getLimitForDate(targetDate);
+  const autoWastedTotal = Math.max(0, limit - nonWasted);
+  const totalWasted = totalWastedManual + autoWastedTotal;
 
   return {
-    tasks, byCat, byDay, sciByDay,
-    total, totalSci, dayCount, days,
-    totalWastedManual, wastedManualByDay,
-    autoWastedTotal, autoWastedByDay,
-    totalWasted: totalWastedManual + autoWastedTotal
+    tasks, byCat, sciByDay,
+    total, totalSci,
+    totalWastedManual, autoWastedTotal,
+    totalWasted
   };
 }
 
@@ -453,7 +487,8 @@ function weekStats(weekStart) {
   let autoWasted = 0;
   daysWithData.forEach(d => {
     const nonWasted = (byDay[d] || 0) - (wastedManualByDay[d] || 0);
-    autoWasted += Math.max(0, DAY_MIN - nonWasted);
+    const limit = getLimitForDate(d); // ⬅ محدودیت هوشمند برای روزهای هفته
+    autoWasted += Math.max(0, limit - nonWasted);
   });
   const totalWasted = totalWastedManual + autoWasted;
 
@@ -544,21 +579,21 @@ function buildScientificChart(weekStart) {
   `;
 }
 
-function buildTodayHTML() {
-  const s = calcStats('today');
-  if (!s.tasks.length) return `<div class="grand">امروز چیزی ثبت نشده</div>`;
+function buildDayHTML(dateStr) {
+  const s = calcStats(dateStr);
+  if (!s.tasks.length) return `<div class="grand">در این روز چیزی ثبت نشده</div>`;
 
-  let html = `<div class="summary-section"><h3>⏱ جمع دسته‌های امروز</h3>`;
+  let html = `<div class="summary-section"><h3>⏱ جمع دسته‌های ${faDate(dateStr)}</h3>`;
   Object.entries(s.byCat).sort((a,b) => b[1] - a[1]).forEach(([name, min]) => {
     const cls = SCIENTIFIC_CATS.includes(name) ? ' sci' : (name === 'تلف شده' ? ' waste' : '');
     html += `<div class="activity-row${cls}"><strong>${escapeHtml(name)}</strong><span class="dur">${formatDurLong(min)}</span></div>`;
   });
   html += `</div>`;
 
-  html += `<div class="grand-sci">📚 علمی امروز: ${formatDurLong(s.totalSci)}</div>`;
-  html += `<div class="grand">✅ ثبت‌شده امروز: ${formatDurLong(s.total)}</div>`;
+  html += `<div class="grand-sci">📚 علمی این روز: ${formatDurLong(s.totalSci)}</div>`;
+  html += `<div class="grand">✅ ثبت‌شده: ${formatDurLong(s.total)}</div>`;
   if (s.totalWasted > 0) {
-    html += `<div class="grand-waste">⛔ تلف‌شده امروز: ${formatDurLong(s.totalWasted)}</div>`;
+    html += `<div class="grand-waste">⛔ تلف‌شده: ${formatDurLong(s.totalWasted)}</div>`;
   }
   return html;
 }
@@ -626,12 +661,11 @@ function buildAllHTML() {
 }
 
 function buildTextFor(range) {
-  const dateStr2 = new Date().toLocaleDateString('fa-IR', { weekday:'long', day:'numeric', month:'long' });
-
-  if (range === 'today') {
-    const s = calcStats('today');
-    if (!s.tasks.length) return `📋 خلاصه امروز — ${dateStr2}\n\nچیزی ثبت نشده.`;
-    const lines = [`📋 خلاصه امروز — ${dateStr2}`, '━━━━━━━━━━━━━━━'];
+  if (range === 'day') {
+    const target = filterDateValue || todayStr();
+    const s = calcStats(target);
+    if (!s.tasks.length) return `📋 خلاصه ${faDate(target)}\n\nچیزی ثبت نشده.`;
+    const lines = [`📋 خلاصه ${faDate(target)}`, '━━━━━━━━━━━━━━━'];
     Object.entries(s.byCat).sort((a,b) => b[1] - a[1]).forEach(([n, m]) => lines.push('   • ' + n + ': ' + formatDurLong(m)));
     lines.push('📚 علمی: ' + formatDurLong(s.totalSci));
     lines.push('✅ ثبت‌شده: ' + formatDurLong(s.total));
@@ -692,9 +726,10 @@ function buildTextFor(range) {
 }
 
 function refreshSummary() {
-  if (currentRange === 'today') summaryBody.innerHTML = buildTodayHTML();
+  if (currentRange === 'day') summaryBody.innerHTML = buildDayHTML(filterDateValue || todayStr());
   else if (currentRange === 'week') summaryBody.innerHTML = buildWeekHTML();
   else summaryBody.innerHTML = buildAllHTML();
+  
   summaryText.textContent = buildTextFor(currentRange);
   document.querySelectorAll('.tab').forEach(t => {
     t.classList.toggle('active', t.dataset.range === currentRange);
@@ -702,7 +737,7 @@ function refreshSummary() {
 }
 
 document.getElementById('btnSummary').onclick = () => {
-  currentRange = 'today';
+  currentRange = 'day';
   refreshSummary();
   modal.classList.add('open');
 };
@@ -729,10 +764,11 @@ function downloadCSV(range) {
   const toHM = m => Math.floor(m/60) + ':' + String(Math.round(m%60)).padStart(2,'0');
   const rows = [];
 
-  if (range === 'today') {
-    const s = calcStats('today');
-    if (!s.tasks.length) { alert('امروز چیزی ثبت نشده.'); return; }
-    rows.push(['خلاصه امروز — ' + todayStr()]);
+  if (range === 'day') {
+    const target = filterDateValue || todayStr();
+    const s = calcStats(target);
+    if (!s.tasks.length) { alert('در این روز چیزی ثبت نشده.'); return; }
+    rows.push(['خلاصه ' + target]);
     rows.push(['دسته', 'مدت (دقیقه)', 'مدت (ساعت:دقیقه)']);
     Object.entries(s.byCat).sort((a,b) => b[1] - a[1]).forEach(([n, m]) => rows.push([n, m, toHM(m)]));
     rows.push(['📚 علمی', s.totalSci, toHM(s.totalSci)]);
@@ -771,7 +807,7 @@ function downloadCSV(range) {
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  const names = { today: 'today', week: 'week', all: 'weekly-history' };
+  const names = { day: 'day', week: 'week', all: 'weekly-history' };
   a.href = url;
   a.download = `karlog-${names[range]}-${todayStr()}.csv`;
   a.click();
