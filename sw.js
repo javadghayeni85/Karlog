@@ -1,4 +1,4 @@
-const CACHE_NAME = 'karlog-v1';
+const CACHE_NAME = 'karlog-v2';
 const urlsToCache = [
   '/Karlog/',
   '/Karlog/index.html'
